@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nail Salon Tracker</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-accent: #6d5edc;
+      --primary-hover: #5b4cbd;
+      --success-green: limegreen;
+      --danger-red: red;
+      --warning-yellow: yellow;
+      --background-color: #f4f7f9;
+      --card-background: #ffffff;
+      --text-color: #333;
+      --text-light: #555;
+      --border-color: #dee2e6;
+      --shadow-color: rgba(0, 0, 0, 0.07);
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: var(--background-color);
+      color: var(--text-color);
+    }
+    .container { max-width: 1400px; margin: auto; }
+    h1 {
+      text-align: center;
+      color: var(--text-light);
+      font-weight: 600;
+      margin-bottom: 2rem;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      padding: 1rem 1.5rem;
+      background: var(--card-background);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px var(--shadow-color);
+    }
+    .controls input, .controls select, .controls button {
+      padding: 0.6rem 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: 'Poppins', sans-serif;
+      height: 44px;
+    }
+    .controls button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      background-color: #6c757d;
+      color: white;
+      border: none;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .controls button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .controls button.danger { background-color: var(--danger-red); }
+    .controls button.primary { background-color: var(--primary-accent); }
+    
+    .service-palette {
+      display: flex;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+    .palette-item {
+      padding: 0.5rem 1rem;
+      border: 2px dashed var(--border-color);
+      border-radius: 8px;
+      cursor: grab;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .palette-item:hover {
+      border-color: var(--primary-accent);
+      color: var(--primary-accent);
+    }
+    .palette-item:active { cursor: grabbing; }
+    
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px var(--shadow-color);
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      table-layout: fixed;
+      background: var(--card-background);
+    }
+    th, td {
+      border: 1px solid var(--border-color);
+      text-align: center;
+      vertical-align: middle;
+      height: 60px;
+      width: 65px;
+      padding: 0;
+      position: relative;
+    }
+    td { cursor: pointer; }
+    td.drag-over {
+      outline: 3px dashed var(--primary-accent);
+      outline-offset: -3px;
+    }
+    th { background: #f8f9fa; font-weight: 600; color: var(--text-light); }
+    .tech-header {
+      position: sticky;
+      left: 0;
+      background: #e9ecef;
+      z-index: 2;
+      min-width: 150px;
+    }
+    
+    .cell-content {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+    .cell-content[draggable="true"] { cursor: grab; }
+    .cell-content[draggable="true"]:active { cursor: grabbing; }
+
+    .full, .full-from-appt { background-color: var(--success-green); }
+    .half { background-color: var(--success-green); }
+    .minus-turn { background-color: var(--danger-red); cursor: not-allowed; }
+    .appointment-half, .full-from-appt { background-color: var(--warning-yellow); }
+    .appt-with-ser { background-color: var(--success-green); }
+    
+    .cell-content::before, .cell-content::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 70%;
+        height: 6px;
+        background-color: white;
+        transform-origin: center;
+        border-radius: 3px;
+        display: none;
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
+    .cell-content::after {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    .appointment-half::before, .full-from-appt::before, .full-from-appt::after {
+        background-color: #333;
+    }
+    .appt-with-ser::before, .appt-with-ser::after {
+        background-color: var(--warning-yellow);
+    }
+    .minus-turn::before {
+        top: 50%;
+        left: 50%;
+        width: 4px;
+        height: 70%;
+        background-color: black;
+        transform: translate(-50%, -50%);
+    }
+
+    .full::before, .full::after,
+    .full-from-appt::before, .full-from-appt::after,
+    .half::before, .appointment-half::before,
+    .minus-turn::before,
+    .appt-with-ser::before, .appt-with-ser::after {
+        display: block;
+    }
+    .half::after, .appointment-half::after, .minus-turn::after {
+        display: none;
+    }
+    .half::before {
+        transform: translate(-50%, -50%) rotate(-45deg);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Nail Salon Tracker</h1>
+    <div class="controls">
+      <input type="date" id="datePicker">
+      <input type="text" id="techNameInput" placeholder="Add Technician" />
+      <button id="addTechBtn" class="primary">Add Tech</button>
+      <select id="techSelect"></select>
+      <button id="undoBtn">Undo</button>
+      <button id="redoBtn">Redo</button>
+      <button id="clearRowBtn">Clear Row</button>
+      <button id="removeTechBtn" class="danger">Remove Tech</button>
+      <button id="clearAllBtn" class="danger">Clear Board</button>
+      
+      <div class="service-palette">
+        <div class="palette-item" draggable="true" data-type="half">Half (\)</div>
+        <div class="palette-item" draggable="true" data-type="full">Full (X)</div>
+        <div class="palette-item" draggable="true" data-type="appointment-half">Appt (/)</div>
+        <div class="palette-item" draggable="true" data-type="appt-with-ser">Appt w/ Ser</div>
+        <div class="palette-item" draggable="true" data-type="minus-turn">Minus</div>
+      </div>
+    </div>
+    <div class="table-wrapper">
+      <table id="serviceGrid">
+        <thead><tr id="headerRow"></tr></thead>
+        <tbody id="gridBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const techNameInput = document.getElementById("techNameInput");
+    const techSelect = document.getElementById("techSelect");
+    const datePicker = document.getElementById("datePicker");
+    const headerRow = document.getElementById("headerRow");
+    const gridBody = document.getElementById("gridBody");
+
+    const COLS = 15;
+    let allData = {};
+    let state = {};
+    let currentDate = '';
+    let history = [];
+    let redoStack = [];
+    let draggedData = null;
+
+    const getFormattedDate = (date) => date.toISOString().slice(0, 10);
+
+    const saveData = () => {
+      allData[currentDate] = state;
+      localStorage.setItem('nailSalonTrackerData', JSON.stringify(allData));
+    };
+
+    const loadData = () => {
+      const savedData = localStorage.getItem('nailSalonTrackerData');
+      if (savedData) {
+        try { allData = JSON.parse(savedData) || {}; } 
+        catch (e) { console.error("Error loading data:", e); allData = {}; }
+      }
+    };
+
+    const changeDate = (newDateStr) => {
+      currentDate = newDateStr;
+      state = allData[currentDate] || { techs: [] };
+      history = [];
+      redoStack = [];
+      render();
+    };
+    
+    const saveStateForUndo = () => {
+      redoStack = []; 
+      history.push(JSON.parse(JSON.stringify(state)));
+      if (history.length > 50) history.shift();
+    };
+
+    const runConsolidation = (tech) => {
+      const halfMarkIndices = tech.slots.reduce((indices, slot, index) => {
+        if (slot === 'half') indices.push(index);
+        return indices;
+      }, []);
+      if (halfMarkIndices.length >= 2) {
+        tech.slots[halfMarkIndices[0]] = 'full';
+        tech.slots[halfMarkIndices[1]] = null;
+      }
+
+      const apptHalfIndices = tech.slots.reduce((indices, slot, index) => {
+        if (slot === 'appointment-half') indices.push(index);
+        return indices;
+      }, []);
+      if (apptHalfIndices.length >= 2) {
+        tech.slots[apptHalfIndices[0]] = 'full-from-appt';
+        tech.slots[apptHalfIndices[1]] = null;
+      }
+      
+      const redHalfIndex = tech.slots.indexOf('half');
+      const yellowHalfIndex = tech.slots.indexOf('appointment-half');
+      if (redHalfIndex > -1 && yellowHalfIndex > -1) {
+        const first = Math.min(redHalfIndex, yellowHalfIndex);
+        const second = Math.max(redHalfIndex, yellowHalfIndex);
+        tech.slots[first] = 'appt-with-ser';
+        tech.slots[second] = null;
+      }
+    };
+
+    const clearAllTechs = () => {
+      console.log("[DEBUG] Clear All button clicked!");
+      if (!state.techs || state.techs.length === 0) {
+        console.log("[DEBUG] No techs to clear. Exiting function.");
+        return;
+      }
+      if (confirm("Are you sure you want to clear the entire board? This will remove all technicians for this day.")) {
+        console.log("[DEBUG] User confirmed. Saving state for undo.");
+        saveStateForUndo();
+        state.techs = [];
+        console.log("[DEBUG] State has been cleared. New state:", state);
+        render();
+      } else {
+        console.log("[DEBUG] User cancelled.");
+      }
+    };
+
+    const clearSelectedRow = () => {
+      if (!state.techs || state.techs.length === 0) return;
+      const techIndex = parseInt(techSelect.value, 10);
+      const tech = state.techs[techIndex];
+      if (!tech) return;
+
+      if (confirm(`Are you sure you want to clear all marks for ${tech.name}?`)) {
+        saveStateForUndo();
+        state.techs[techIndex].slots = Array(COLS).fill(null);
+        render();
+      }
+    };
+
+    const handleCellClick = (techIndex, slotIndex) => {
+      const tech = state.techs[techIndex];
+      if (!tech) return;
+      const currentSlot = tech.slots[slotIndex];
+
+      if (currentSlot === 'minus-turn') return;
+      
+      let newSlot;
+      switch (currentSlot) {
+        case null: newSlot = 'half'; break;
+        case 'half': newSlot = 'full'; break;
+        case 'full': newSlot = 'full-from-appt'; break;
+        case 'full-from-appt': newSlot = 'appointment-half'; break;
+        case 'appointment-half': newSlot = 'appt-with-ser'; break;
+        case 'appt-with-ser': newSlot = null; break;
+        default: newSlot = null; break;
+      }
+      saveStateForUndo();
+      tech.slots[slotIndex] = newSlot;
+      runConsolidation(tech);
+      render();
+    };
+
+    const addTech = () => {
+      techNameInput.blur();
+      const name = techNameInput.value.trim();
+      if (name && !state.techs.some((t) => t.name === name)) {
+        saveStateForUndo();
+        state.techs.push({ name, slots: Array(COLS).fill(null) });
+        techNameInput.value = "";
+        render();
+      }
+    };
+
+    const removeSelectedTech = () => {
+      if (!state.techs || state.techs.length === 0) return;
+      const techName = techSelect.options[techSelect.selectedIndex].text;
+      if (confirm(`Are you sure you want to remove ${techName}?`)) {
+        const index = parseInt(techSelect.value, 10);
+        if (index >= 0) {
+          saveStateForUndo();
+          state.techs.splice(index, 1);
+          render();
+        }
+      }
+    };
+    
+    const undo = () => {
+      if (history.length === 0) return;
+      redoStack.push(JSON.parse(JSON.stringify(state)));
+      state = history.pop();
+      render();
+    };
+    
+    const redo = () => {
+      if (redoStack.length === 0) return;
+      history.push(JSON.parse(JSON.stringify(state)));
+      state = redoStack.pop();
+      render();
+    };
+
+    const getSlotPriority = (slot) => {
+        switch (slot) {
+            case 'full': case 'full-from-appt': case 'appt-with-ser': return 0;
+            case 'half': case 'appointment-half': return 1;
+            case 'minus-turn': return 2;
+            case null: return 3;
+            default: return 4;
+        }
+    };
+
+    const handleDragStart = (e) => {
+        draggedData = {
+            type: e.target.dataset.type,
+            sourceTechIndex: e.target.dataset.techIndex,
+            sourceSlotIndex: e.target.dataset.slotIndex
+        };
+        e.dataTransfer.effectAllowed = 'move';
+    };
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+    };
+    const handleDragLeave = (e) => {
+        e.currentTarget.classList.remove('drag-over');
+    };
+    const handleDrop = (e) => {
+        e.preventDefault();
+        const dropTarget = e.currentTarget;
+        dropTarget.classList.remove('drag-over');
+        if (!draggedData) return;
+
+        saveStateForUndo();
+
+        if (draggedData.sourceTechIndex !== undefined && draggedData.sourceSlotIndex !== undefined) {
+            state.techs[draggedData.sourceTechIndex].slots[draggedData.sourceSlotIndex] = null;
+        }
+
+        const targetTechIndex = dropTarget.dataset.techIndex;
+        const targetSlotIndex = dropTarget.dataset.slotIndex;
+        const targetTech = state.techs[targetTechIndex];
+        if (targetTech) {
+            targetTech.slots[targetSlotIndex] = draggedData.type;
+            runConsolidation(targetTech);
+        }
+        render();
+    };
+
+    const render = () => {
+      console.log("[DEBUG] Render function started. Current state:", JSON.parse(JSON.stringify(state)));
+      headerRow.innerHTML = `<th class="tech-header">Technician</th>`;
+      for (let i = 0; i < COLS; i++) headerRow.innerHTML += `<th>${i + 1}</th>`;
+      
+      gridBody.innerHTML = "";
+      (state.techs || []).forEach((tech, techIndex) => {
+        
+        const newSlots = Array(COLS).fill(null);
+        const movableItems = [];
+        
+        tech.slots.forEach((slot, index) => {
+            if (slot === 'minus-turn') {
+                newSlots[index] = 'minus-turn';
+            } else if (slot !== null) {
+                movableItems.push(slot);
+            }
+        });
+
+        movableItems.sort((a, b) => getSlotPriority(a) - getSlotPriority(b));
+
+        let movableIndex = 0;
+        for (let i = 0; i < COLS; i++) {
+            if (newSlots[i] === null && movableIndex < movableItems.length) {
+                newSlots[i] = movableItems[movableIndex];
+                movableIndex++;
+            }
+        }
+        tech.slots = newSlots;
+
+        const row = document.createElement("tr");
+        row.innerHTML = `<th class="tech-header">${tech.name}</th>`;
+        
+        tech.slots.forEach((slot, slotIndex) => {
+          const td = document.createElement("td");
+          td.dataset.techIndex = techIndex;
+          td.dataset.slotIndex = slotIndex;
+          td.addEventListener('dragover', handleDragOver);
+          td.addEventListener('dragleave', handleDragLeave);
+          td.addEventListener('drop', handleDrop);
+          td.addEventListener('click', () => handleCellClick(techIndex, slotIndex));
+
+          const div = document.createElement("div");
+          div.className = 'cell-content';
+          if (slot) {
+            div.classList.add(slot);
+            if (slot !== 'minus-turn'){
+              div.draggable = true;
+            }
+            div.dataset.type = slot;
+            div.dataset.techIndex = techIndex;
+            div.dataset.slotIndex = slotIndex;
+            div.addEventListener('dragstart', handleDragStart);
+          }
+          td.appendChild(div);
+          row.appendChild(td);
+        });
+        gridBody.appendChild(row);
+      });
+
+      const selectedIndex = techSelect.value; 
+      techSelect.innerHTML = "";
+      (state.techs || []).forEach((tech, index) => {
+        const opt = document.createElement("option");
+        opt.value = index;
+        opt.textContent = tech.name;
+        techSelect.appendChild(opt);
+      });
+      if (state.techs && state.techs[selectedIndex]) {
+        techSelect.value = selectedIndex;
+      }
+      saveData();
+    };
+
+    // --- INITIALIZATION & EVENT LISTENERS ---
+    loadData();
+    datePicker.addEventListener('change', (e) => changeDate(e.target.value));
+    
+    const initialDate = getFormattedDate(new Date());
+    datePicker.value = initialDate;
+    changeDate(initialDate);
+    
+    document.getElementById('addTechBtn').addEventListener('click', addTech);
+    document.getElementById('removeTechBtn').addEventListener('click', removeSelectedTech);
+    document.getElementById('clearRowBtn').addEventListener('click', clearSelectedRow);
+    document.getElementById('clearAllBtn').addEventListener('click', clearAllTechs);
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('redoBtn').addEventListener('click', redo);
+    
+    document.querySelectorAll('.palette-item').forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+    });
+  </script>
+</body>
+</html>
